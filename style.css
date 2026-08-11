@@ -60,11 +60,11 @@ canvas { display: block; }
 }
 
 #joystickZone {
-    display: none;
-  position: fixed; bottom: 40px; left: 40px;
+  position: fixed;
   width: 100px; height: 100px;
   background: rgba(255,255,255,0.15);
   border-radius: 50%; z-index: 10;
+  display: none;
 }
 #joystickStick {
   position: absolute; top: 25px; left: 25px;
