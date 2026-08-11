@@ -182,28 +182,40 @@ function updateRings() {
 const zone = document.getElementById('joystickZone');
 const stick = document.getElementById('joystickStick');
 let joyActive = false, joyX = 0, joyY = 0;
+let joyCenterX = 0, joyCenterY = 0;
 
-zone.addEventListener('touchstart', e => { joyActive = true; });
-zone.addEventListener('touchmove', e => {
-  if (!joyActive) return;
-  const rect = zone.getBoundingClientRect();
+document.addEventListener('touchstart', e => {
+  if (!gameStarted) return;
   const touch = e.touches[0];
-  let dx = touch.clientX - (rect.left + rect.width/2);
-  let dy = touch.clientY - (rect.top + rect.height/2);
+  joyCenterX = touch.clientX;
+  joyCenterY = touch.clientY;
+  zone.style.left = (joyCenterX - 50) + 'px';
+  zone.style.top = (joyCenterY - 50) + 'px';
+  zone.style.display = 'block';
+  joyActive = true;
+});
+
+document.addEventListener('touchmove', e => {
+  if (!joyActive) return;
+  const touch = e.touches[0];
+  let dx = touch.clientX - joyCenterX;
+  let dy = touch.clientY - joyCenterY;
   const maxDist = 35;
   const dist = Math.min(Math.hypot(dx, dy), maxDist);
   const angle = Math.atan2(dy, dx);
   dx = Math.cos(angle) * dist;
   dy = Math.sin(angle) * dist;
   stick.style.transform = `translate(${dx}px, ${dy}px)`;
-  joyX = dx / maxDist; // -1 to 1
+  joyX = dx / maxDist;
   joyY = dy / maxDist;
 });
 
-zone.addEventListener('touchend', e => {
+document.addEventListener('touchend', e => {
   joyActive = false; joyX = 0; joyY = 0;
+  zone.style.display = 'none';
   stick.style.transform = `translate(0px, 0px)`;
 });
+
 document.getElementById('restartBtn').addEventListener('click', () => location.reload());
 document.getElementById('playBtn').addEventListener('click', () => {
   document.getElementById('joystickZone').style.display = 'block';
