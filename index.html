@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Red Space</title>
+    <link rel="icon" href="favicon.png" type="image/x-icon">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="startScreen">
+        <h1>Red Space</h1>
+        <p>Dodge obstacles, grab rings, survive as long as you can!</p>
+        <button id="playBtn">Play</button>
+    </div>
+    <div id="score">Score: 0</div>
+    <div id="joystickZone">
+        <div id="joystickStick"></div>
+    </div>
+    <div id="gameOver" style="display:none;">
+        <h1>Game Over</h1>
+        <p id="finalScore"></p>
+        <button id="restartBtn">Restart</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

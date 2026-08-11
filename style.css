@@ -1,0 +1,85 @@
+body { margin: 0; overflow: hidden; background: #87CEEB; }
+canvas { display: block; }
+#score {
+    display: none;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    justify-content: center;
+    color: white; font: bold 28px Arial; text-shadow: 2px 2px 4px black;
+}
+
+#gameOver {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center; color: white;
+  font-family: Arial; background: rgba(0,0,0,0.7);
+  padding: 30px 50px; border-radius: 12px;
+}
+#gameOver button {
+  margin-top: 15px; padding: 10px 25px;
+  font-size: 18px; border: none; border-radius: 8px;
+  background: #ffd700; cursor: pointer; font-weight: bold;
+}
+
+#startScreen {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center; color: white;
+  font-family: Arial; background: rgba(0,0,0,0.75);
+  padding: 40px 60px; border-radius: 14px;
+}
+#startScreen h1 { margin: 0 0 10px; font-size: 36px; }
+#startScreen p { margin: 0 0 20px; opacity: 0.85; }
+#startScreen button, #gameOver button {
+  padding: 12px 30px; font-size: 18px; border: none;
+  border-radius: 8px; background: #ffd700; cursor: pointer; font-weight: bold;
+}
+
+#startScreen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center; color: white;
+  font-family: Arial; background: rgba(0,0,0,0.75);
+  padding: 40px 60px; border-radius: 14px;
+  box-sizing: border-box;
+}
+
+#startScreen h1 {
+    font-size: 5vw;
+    font-weight: 200;
+}
+
+#joystickZone {
+    display: none;
+  position: fixed; bottom: 40px; left: 40px;
+  width: 100px; height: 100px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 50%; z-index: 10;
+}
+#joystickStick {
+  position: absolute; top: 25px; left: 25px;
+  width: 50px; height: 50px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 50%;
+}
+
+@media (max-width: 600px) {
+  #startScreen h1 { font-size: 13vw; }
+  #startScreen p { font-size: 3vw; }
+  #startScreen button { font-size: 20px; padding: 14px 36px; }
+  #gameOver { padding: 20px 30px; width: 70vw;}
+  #gameOver h1 { font-size: 10vw; border-radius: 30px; }
+  #joystickZone { width: 90px; height: 90px; bottom: 30px; left: 30px; }
+  #joystickStick { width: 45px; height: 45px; top: 22px; left: 22px; }
+  #score { font-size: 7vw; justify-content:center;}
+}
