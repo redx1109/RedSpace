@@ -216,7 +216,13 @@ document.addEventListener('touchend', e => {
   stick.style.transform = `translate(0px, 0px)`;
 });
 
-document.getElementById('restartBtn').addEventListener('click', () => location.reload());
+document.getElementById('restartBtn').addEventListener('click', () => {
+  document.getElementById('joystickZone').style.display = 'block';
+  document.getElementById('score').style.display = 'block';
+  document.getElementById('startScreen').style.display = 'none';
+  gameStarted = true;
+});
+
 document.getElementById('playBtn').addEventListener('click', () => {
   document.getElementById('joystickZone').style.display = 'block';
   document.getElementById('score').style.display = 'block';
