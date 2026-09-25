@@ -217,9 +217,22 @@ document.addEventListener('touchend', e => {
 });
 
 document.getElementById('restartBtn').addEventListener('click', () => {
+  document.getElementById('gameOver').style.display = 'none';
   document.getElementById('joystickZone').style.display = 'block';
   document.getElementById('score').style.display = 'block';
   document.getElementById('startScreen').style.display = 'none';
+
+  obstacles.forEach(o => scene.remove(o));
+  obstacles.length = 0;
+  rings.forEach(r => scene.remove(r));
+  rings.length = 0;
+
+  plane.position.set(0, 2, 0);
+  score = 0;
+  forwardSpeed = 0.2;
+  scoreEl.textContent = 'Score: 0';
+
+  gameOver = false;
   gameStarted = true;
 });
 
