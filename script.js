@@ -105,9 +105,10 @@ function spawnObstacle() {
   for (let x = -6; x <= 6; x += 2) {
     if (Math.abs(x - gapX) < 1.5) continue; // leave gap to dodge through
     const obs = new THREE.Mesh(
-      new THREE.SphereGeometry(0.5, 12, 12),
-      new THREE.MeshStandardMaterial({ color: 0x333333 })
+      new THREE.IcosahedronGeometry(0.5, 0),
+      new THREE.MeshStandardMaterial({ color: 0x555555, flatShading: true, roughness: 0.9 })
     );
+    obs.rotation.set(Math.random()*6, Math.random()*6, Math.random()*6);
     obs.position.set(x, Math.random() * 3.5 + 0.5, plane.position.z - 60);
     scene.add(obs);
     obstacles.push(obs);
