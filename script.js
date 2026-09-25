@@ -185,7 +185,7 @@ let joyActive = false, joyX = 0, joyY = 0;
 let joyCenterX = 0, joyCenterY = 0;
 
 document.addEventListener('touchstart', e => {
-  if (!gameStarted) return;
+  if (!gameStarted || gameOver) return;
   const touch = e.touches[0];
   joyCenterX = touch.clientX;
   joyCenterY = touch.clientY;
