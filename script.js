@@ -44,7 +44,8 @@ function updateControls() {
   plane.position.y = THREE.MathUtils.clamp(plane.position.y, bounds.yMin, bounds.y);
  
   // tilt effect on turn
-  plane.rotation.z = THREE.MathUtils.lerp(plane.rotation.z, keys['ArrowLeft'] ? 0.5 : keys['ArrowRight'] ? -0.5 : 0, 0.1);
+  const tilt = keys['ArrowLeft'] ? 0.5 : keys['ArrowRight'] ? -0.5 : -joyX * 0.5;
+plane.rotation.z = THREE.MathUtils.lerp(plane.rotation.z, tilt, 0.1);
 }
  
 // ---- Forward world illusion: move ground/sky markers toward camera ----
@@ -180,46 +181,68 @@ function updateRings() {
   }
 }
 
+// ---- Touch joystick (floating, tracks one finger) ----
 const zone = document.getElementById('joystickZone');
 const stick = document.getElementById('joystickStick');
-let joyActive = false, joyX = 0, joyY = 0;
+let joyId = null, joyX = 0, joyY = 0;
 let joyCenterX = 0, joyCenterY = 0;
+const JOY_MAX = 37;
+const JOY_DEAD = 0.12;
+
+function joyAxis(v) {
+  const a = Math.abs(v);
+  if (a < JOY_DEAD) return 0;
+  return Math.sign(v) * (a - JOY_DEAD) / (1 - JOY_DEAD);
+}
+
+function joyReset() {
+  joyId = null; joyX = 0; joyY = 0;
+  zone.style.display = 'none';
+  stick.style.transform = 'translate(0px, 0px)';
+}
+
+function joyTouch(list) {
+  for (const t of list) if (t.identifier === joyId) return t;
+  return null;
+}
 
 document.addEventListener('touchstart', e => {
-  if (!gameStarted || gameOver) return;
-  const touch = e.touches[0];
-  joyCenterX = touch.clientX;
-  joyCenterY = touch.clientY;
-  zone.style.left = (joyCenterX - 50) + 'px';
-  zone.style.top = (joyCenterY - 50) + 'px';
+  if (!gameStarted || gameOver || joyId !== null) return;
+  if (e.target.closest('button')) return;
+  const t = e.changedTouches[0];
+  joyId = t.identifier;
+  joyCenterX = t.clientX;
+  joyCenterY = t.clientY;
   zone.style.display = 'block';
-  joyActive = true;
-});
+  zone.style.left = (joyCenterX - zone.offsetWidth / 2) + 'px';
+  zone.style.top = (joyCenterY - zone.offsetHeight / 2) + 'px';
+}, { passive: false });
 
 document.addEventListener('touchmove', e => {
-  if (!joyActive) return;
-  const touch = e.touches[0];
-  let dx = touch.clientX - joyCenterX;
-  let dy = touch.clientY - joyCenterY;
-  const maxDist = 35;
-  const dist = Math.min(Math.hypot(dx, dy), maxDist);
+  if (joyId === null) return;
+  const t = joyTouch(e.changedTouches);
+  if (!t) return;
+  e.preventDefault();
+  let dx = t.clientX - joyCenterX;
+  let dy = t.clientY - joyCenterY;
+  const dist = Math.min(Math.hypot(dx, dy), JOY_MAX);
   const angle = Math.atan2(dy, dx);
   dx = Math.cos(angle) * dist;
   dy = Math.sin(angle) * dist;
   stick.style.transform = `translate(${dx}px, ${dy}px)`;
-  joyX = dx / maxDist;
-  joyY = dy / maxDist;
-});
+  joyX = joyAxis(dx / JOY_MAX);
+  joyY = joyAxis(dy / JOY_MAX);
+}, { passive: false });
 
-document.addEventListener('touchend', e => {
-  joyActive = false; joyX = 0; joyY = 0;
-  zone.style.display = 'none';
-  stick.style.transform = `translate(0px, 0px)`;
-});
+function joyEnd(e) {
+  if (joyId !== null && joyTouch(e.changedTouches)) joyReset();
+}
+document.addEventListener('touchend', joyEnd);
+document.addEventListener('touchcancel', joyEnd);
 
 document.getElementById('restartBtn').addEventListener('click', () => {
   document.getElementById('gameOver').style.display = 'none';
-  document.getElementById('joystickZone').style.display = 'block';
+  joyReset();
   document.getElementById('score').style.display = 'block';
   document.getElementById('startScreen').style.display = 'none';
 
@@ -238,7 +261,6 @@ document.getElementById('restartBtn').addEventListener('click', () => {
 });
 
 document.getElementById('playBtn').addEventListener('click', () => {
-  document.getElementById('joystickZone').style.display = 'block';
   document.getElementById('score').style.display = 'block';
   document.getElementById('startScreen').style.display = 'none';
   gameStarted = true;
