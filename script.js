@@ -37,8 +37,9 @@ function updateControls() {
   if (keys['ArrowRight']) plane.position.x += moveSpeed;
   if (keys['ArrowUp'])    plane.position.y += moveSpeed;
   if (keys['ArrowDown'])  plane.position.y -= moveSpeed;
-  plane.position.x += joyX * moveSpeed;
-  plane.position.y -= joyY * moveSpeed;
+  const TOUCH_SPEED = 0.7; // lower = calmer
+  plane.position.x += joyX * Math.abs(joyX) * moveSpeed * TOUCH_SPEED;
+  plane.position.y -= joyY * Math.abs(joyY) * moveSpeed * TOUCH_SPEED;
 
   plane.position.x = THREE.MathUtils.clamp(plane.position.x, -bounds.x, bounds.x);
   plane.position.y = THREE.MathUtils.clamp(plane.position.y, bounds.yMin, bounds.y);
