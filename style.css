@@ -1,4 +1,4 @@
-body { margin: 0; overflow: hidden; background: #87CEEB; }
+body { margin: 0; overflow: hidden; background: #070a1f; }
 canvas { display: block; }
 #score {
     display: none;
@@ -104,6 +104,12 @@ html, body {
   opacity: 0; transition: opacity 0.4s; pointer-events: none; z-index: 5;
 }
 #bestLine { margin: 0 0 20px; opacity: 0.85; }
+#themeBtn {
+  position: fixed; top: 8px; right: 10px; z-index: 20;
+  padding: 6px 10px; font: bold 12px Arial; letter-spacing: 0.05em; color: #fff;
+  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 8px; cursor: pointer;
+}
 
 @media (max-width: 600px) {
   #banner { font-size: 9vw; }
