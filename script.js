@@ -18,8 +18,8 @@ function vib(p) { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {
 
 // ---- Basic setup ----
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87CEEB);
-scene.fog = new THREE.Fog(0x87CEEB, 10, 100);
+scene.background = new THREE.Color(0x070a1f);
+scene.fog = new THREE.Fog(0x070a1f, 10, 100);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 2, 4);
@@ -37,35 +37,115 @@ scene.add(new THREE.AmbientLight(0x888888));
 
 // ---- Plane (player) ----
 const plane = new THREE.Group();
-const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff5555 });
-const body = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.8, 8), bodyMat);
+const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe03a4a, metalness: 0.5, roughness: 0.4 });
+const body = new THREE.Mesh(new THREE.ConeGeometry(0.32, 2.0, 6), bodyMat);
 body.rotation.x = -Math.PI / 2; // nose points forward (-z)
-const wings = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.07, 0.65), new THREE.MeshStandardMaterial({ color: 0xcc2222 }));
-wings.position.z = 0.35;
-const fin = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.5, 0.45), bodyMat);
-fin.position.set(0, 0.28, 0.6);
-const glow = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffaa33 }));
-glow.position.z = 0.95;
+function wingGeo(s) { // swept delta wing, one triangle
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+    0.15 * s, 0, -0.2,   1.25 * s, -0.05, 0.9,   0.15 * s, 0, 0.9
+  ]), 3));
+  g.computeVertexNormals();
+  return g;
+}
+const wingMat = new THREE.MeshStandardMaterial({ color: 0x9a1f2e, metalness: 0.4, roughness: 0.5, side: THREE.DoubleSide });
+const wingR = new THREE.Mesh(wingGeo(1), wingMat), wingL = new THREE.Mesh(wingGeo(-1), wingMat);
+const fin = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.45, 0.55), bodyMat);
+fin.position.set(0, 0.25, 0.7);
+const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 8),
+  new THREE.MeshStandardMaterial({ color: 0x66ddff, emissive: 0x2288aa, emissiveIntensity: 0.8 }));
+cockpit.scale.set(1, 0.7, 1.8);
+cockpit.position.set(0, 0.2, -0.15);
+const glow = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffaa33 }));
+glow.position.z = 1.05;
+const podGeo = new THREE.SphereGeometry(0.1, 6, 6), podMat = new THREE.MeshBasicMaterial({ color: 0x66ddff });
+const podR = new THREE.Mesh(podGeo, podMat), podL = new THREE.Mesh(podGeo, podMat);
+podR.position.set(1.25, -0.05, 0.9);
+podL.position.set(-1.25, -0.05, 0.9);
 const shield = new THREE.Mesh(
   new THREE.SphereGeometry(1.3, 16, 12),
   new THREE.MeshBasicMaterial({ color: 0x44aaff, transparent: true, opacity: 0.25, depthWrite: false })
 );
 shield.visible = false;
-plane.add(body, wings, fin, glow, shield, new THREE.PointLight(0xff5555, 1, 3));
+const shipSpace = new THREE.Group();
+shipSpace.add(body, wingR, wingL, fin, cockpit, glow, podR, podL);
+
+// classic airplane for the sky sectors
+const airMat = new THREE.MeshStandardMaterial({ color: 0xff5555 });
+const airBody = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.8, 8), airMat);
+airBody.rotation.x = -Math.PI / 2;
+const airWings = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.07, 0.65), new THREE.MeshStandardMaterial({ color: 0xcc2222 }));
+airWings.position.z = 0.35;
+const airFin = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.5, 0.45), airMat);
+airFin.position.set(0, 0.28, 0.6);
+const airGlow = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffaa33 }));
+airGlow.position.z = 0.95;
+const shipAir = new THREE.Group();
+shipAir.add(airBody, airWings, airFin, airGlow);
+shipAir.visible = false;
+function setKind(kind) { shipSpace.visible = kind === 'space'; shipAir.visible = kind === 'sky'; }
+
+plane.add(shipSpace, shipAir, shield, new THREE.PointLight(0xff5555, 1, 3));
 plane.position.set(0, 1.8, 0);
 scene.add(plane);
 
-// ---- Ground grid + stars ----
+// ---- Ground grid (fades in for sky sectors) ----
 const grid = new THREE.GridHelper(200, 40, 0xffffff, 0xffffff); // cell size = 5
 grid.position.y = -1;
+grid.material.transparent = true;
+grid.material.opacity = 0;
+grid.visible = false;
 scene.add(grid);
 
+// ---- Distant planet / star (changes per sector) ----
+const planetMat = new THREE.MeshStandardMaterial({ color: 0x3a6ea5, emissive: 0x3a6ea5, emissiveIntensity: 0.45, roughness: 1, fog: false });
+const planet = new THREE.Mesh(new THREE.SphereGeometry(70, 32, 24), planetMat);
+planet.position.set(-110, -50, -420);
+const haloMat = new THREE.MeshBasicMaterial({
+  color: 0x3a6ea5, transparent: true, opacity: 0.18, side: THREE.BackSide,
+  fog: false, depthWrite: false, blending: THREE.AdditiveBlending
+});
+planet.add(new THREE.Mesh(new THREE.SphereGeometry(86, 32, 24), haloMat));
+scene.add(planet);
+const planetT = new THREE.Color();
+
+// ---- Warp streaks (speed lines along the sides) ----
+const STREAKS = 140;
+const sPos = new Float32Array(STREAKS * 6), sHead = new Float32Array(STREAKS * 3);
+function resetStreak(i, anywhere) {
+  const k = i * 3;
+  sHead[k] = (Math.random() < 0.5 ? -1 : 1) * rand(7, 18);
+  sHead[k + 1] = rand(-5, 11);
+  sHead[k + 2] = anywhere ? rand(-110, 4) : -110;
+}
+for (let i = 0; i < STREAKS; i++) resetStreak(i, true);
+const sGeo = new THREE.BufferGeometry();
+sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+const streaks = new THREE.LineSegments(sGeo, new THREE.LineBasicMaterial({ color: 0x9bb7ff, transparent: true, opacity: 0.5 }));
+streaks.frustumCulled = false;
+scene.add(streaks);
+function updateStreaks(speed, dt) {
+  const len = 0.5 + speed * 6;
+  for (let i = 0; i < STREAKS; i++) {
+    const k = i * 3, j = i * 6;
+    sHead[k + 2] += speed * dt;
+    if (sHead[k + 2] - len > 6) resetStreak(i, false);
+    sPos[j] = sPos[j + 3] = sHead[k];
+    sPos[j + 1] = sPos[j + 4] = sHead[k + 1];
+    sPos[j + 2] = sHead[k + 2];
+    sPos[j + 5] = sHead[k + 2] - len;
+  }
+  sGeo.attributes.position.needsUpdate = true;
+}
+updateStreaks(0, 0);
+
+// ---- Stars ----
 const starGeo = new THREE.BufferGeometry();
-const starCount = 800;
+const starCount = 1200;
 const starPositions = new Float32Array(starCount * 3);
 for (let i = 0; i < starCount * 3; i++) starPositions[i] = (Math.random() - 0.5) * 200;
 starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.15, transparent: true, opacity: 0.1 });
+const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0.8 });
 scene.add(new THREE.Points(starGeo, starMat));
 
 function updateStars(speed, dt) {
@@ -77,22 +157,35 @@ function updateStars(speed, dt) {
 }
 
 // ---- Game state ----
-const THEMES = [
-  { at: 0,   name: '',              sky: 0x87CEEB },
-  { at: 100, name: 'SUNSET',        sky: 0xff9b5e },
-  { at: 250, name: 'TWILIGHT',      sky: 0x3a1f6e },
-  { at: 450, name: 'DEEP SPACE',    sky: 0x05050f },
-  { at: 700, name: 'NEON STORM',    sky: 0x2a0a3a }
+// Sectors alternate sky / space and loop forever. planet = big body in the distance (sun, moon or planet),
+// px/py = where it sits, stars = star brightness. kind decides ship model, grid and streak style.
+const SECTOR_LEN = 120; // progress points per sector (about 20 seconds)
+const SECTORS = [
+  { name: 'DEEP SPACE',    kind: 'space', sky: 0x070a1f, planet: 0x3a6ea5, px: -110, py: -50, stars: 0.85 },
+  { name: 'CLEAR SKIES',   kind: 'sky',   sky: 0x87CEEB, planet: 0xfff2a0, px: 90,   py: 30,  stars: 0 },
+  { name: 'NEBULA',        kind: 'space', sky: 0x2d1250, planet: 0xb04fd6, px: -120, py: -20, stars: 0.9 },
+  { name: 'SUNSET',        kind: 'sky',   sky: 0xff9b5e, planet: 0xff6a2a, px: 30,   py: -5,  stars: 0 },
+  { name: 'STAR DAWN',     kind: 'space', sky: 0x7a3318, planet: 0xffb347, px: -40,  py: 35,  stars: 0.6 },
+  { name: 'TWILIGHT',      kind: 'sky',   sky: 0x3a1f6e, planet: 0xdfe8ff, px: -90,  py: 30,  stars: 0.5 },
+  { name: 'ICE FIELD',     kind: 'space', sky: 0x0b3b4a, planet: 0x7fe0ff, px: 120,  py: -10, stars: 0.85 },
+  { name: 'STORM CLOUDS',  kind: 'sky',   sky: 0x4a5568, planet: 0x9aa5b8, px: 110,  py: 40,  stars: 0 },
+  { name: 'CRIMSON STORM', kind: 'space', sky: 0x3d0a16, planet: 0xff3355, px: -90,  py: 20,  stars: 0.85 }
 ];
+const MODES = ['auto', 'space', 'sky']; // auto = sectors alternate, otherwise only that kind
+let modeIdx = Math.max(0, MODES.indexOf(store('redspace_mode')));
+function sectorAt(p) {
+  const list = modeIdx === 0 ? SECTORS : SECTORS.filter(s => s.kind === MODES[modeIdx]);
+  return list[Math.floor(p / SECTOR_LEN) % list.length];
+}
 let score = 0, progress = 0, combo = 1;
 let gameOver = false, gameStarted = false;
 let forwardSpeed = 0.2, timeScale = 1, shake = 0;
 let best = parseInt(store('redspace_best'), 10) || 0;
 const power = { shield: false, slow: 0, magnet: 0 };
 const storm = { left: 0 };
-let nextStorm = 300, obsT = 0, ringT = 0, puT = 0, stormT = 0, themeIdx = 0;
+let nextStorm = 300, obsT = 0, ringT = 0, puT = 0, stormT = 0, curSector = null;
 const obstacles = [], rings = [], pickups = [];
-const skyCur = new THREE.Color(0x87CEEB), skyTarget = new THREE.Color();
+const skyCur = new THREE.Color(0x070a1f), skyTarget = new THREE.Color();
 
 const scoreEl = document.getElementById('score');
 const finalEl = document.getElementById('finalScore');
@@ -106,6 +199,20 @@ const bestLine = document.createElement('p');
 bestLine.id = 'bestLine';
 startEl.insertBefore(bestLine, document.getElementById('playBtn'));
 bestLine.textContent = best > 0 ? 'Best: ' + best : '';
+
+// theme button: AUTO (sectors alternate by score) -> SPACE only -> SKY only
+const themeBtn = document.createElement('button');
+themeBtn.id = 'themeBtn';
+const modeLabel = () => 'THEME: ' + MODES[modeIdx].toUpperCase();
+themeBtn.textContent = modeLabel();
+document.body.appendChild(themeBtn);
+themeBtn.addEventListener('click', () => {
+  modeIdx = (modeIdx + 1) % MODES.length;
+  store('redspace_mode', MODES[modeIdx]);
+  themeBtn.textContent = modeLabel();
+  themeBtn.blur();
+  if (!gameStarted) snapTheme(); // preview on the home screen; in a run it fades in
+});
 
 let bannerTimer = 0;
 function banner(text) {
@@ -171,8 +278,25 @@ let pHead = 0;
 const pGeo = new THREE.BufferGeometry();
 pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
 pGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
+function glowTex() { // soft round sprite; falls back to plain squares if canvas is unavailable
+  try {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d');
+    if (!g) return null;
+    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, 'rgba(255,255,255,1)');
+    gr.addColorStop(0.4, 'rgba(255,255,255,0.45)');
+    gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(c);
+  } catch (e) { return null; }
+}
+// sizeAttenuation off = constant pixel size, so sparks never balloon when they pass the camera
 const particles = new THREE.Points(pGeo, new THREE.PointsMaterial({
-  size: 0.3, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+  size: 12, sizeAttenuation: false, map: glowTex(), vertexColors: true,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
 }));
 particles.frustumCulled = false;
 scene.add(particles);
@@ -284,8 +408,17 @@ document.addEventListener('touchend', joyEnd);
 document.addEventListener('touchcancel', joyEnd);
 
 // ---- Shared meshes (no per-spawn allocation) ----
-const rockGeo = new THREE.IcosahedronGeometry(0.5, 0);
-const rockMat = new THREE.MeshStandardMaterial({ color: 0x555555, flatShading: true, roughness: 0.9, emissive: 0x1a0a0a });
+const rockGeo = new THREE.IcosahedronGeometry(0.5, 1);
+(function () { // lumpy asteroid: same offset for shared corners so faces stay joined
+  const p = rockGeo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    const n = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453;
+    const f = 0.82 + 0.3 * (n - Math.floor(n));
+    p.setXYZ(i, x * f, y * f, z * f);
+  }
+})();
+const rockMat = new THREE.MeshStandardMaterial({ color: 0x6a625c, flatShading: true, roughness: 0.9, emissive: 0x1a0a0a });
 const laserGeo = new THREE.BoxGeometry(12, 0.22, 0.22);
 const laserMat = new THREE.MeshBasicMaterial({ color: 0xff2244 });
 const spinGeo = new THREE.BoxGeometry(5, 0.3, 0.3);
@@ -467,15 +600,48 @@ function spawner(wdt) {
 
 // ---- Sky theme by progress ----
 function applySky() { scene.background.copy(skyCur); scene.fog.color.copy(skyCur); }
+const streakT = new THREE.Color();
 function updateTheme(dt) {
-  let idx = 0;
-  for (let i = 0; i < THEMES.length; i++) if (progress >= THEMES[i].at) idx = i;
-  if (idx !== themeIdx) { themeIdx = idx; if (THEMES[idx].name) banner(THEMES[idx].name); }
-  skyTarget.setHex(THEMES[idx].sky);
+  const th = sectorAt(progress);
+  if (th !== curSector) { // new sector (score milestone or theme button)
+    if (!curSector || curSector.kind !== th.kind) setKind(th.kind);
+    curSector = th;
+    banner(th.name);
+  }
+  const sky = th.kind === 'sky';
+  skyTarget.setHex(th.sky);
   skyCur.lerp(skyTarget, 1 - Math.pow(0.985, dt));
   applySky();
-  const lum = skyCur.r * 0.3 + skyCur.g * 0.59 + skyCur.b * 0.11;
-  starMat.opacity = clamp((0.55 - lum) * 2.2, 0.1, 1);
+  starMat.opacity = damp(starMat.opacity, th.stars, 0.03, dt);
+
+  planetT.setHex(th.planet); // planet / sun drifts and changes colour per sector
+  planetMat.color.lerp(planetT, 1 - Math.pow(0.99, dt));
+  planetMat.emissive.copy(planetMat.color);
+  haloMat.color.copy(planetMat.color);
+  planet.position.x = damp(planet.position.x, th.px, 0.01, dt);
+  planet.position.y = damp(planet.position.y, th.py, 0.01, dt);
+
+  streakT.setHex(sky ? 0xffffff : 0x9bb7ff);
+  streaks.material.color.lerp(streakT, 0.05 * dt);
+  streaks.material.opacity = damp(streaks.material.opacity, sky ? 0.3 : 0.5, 0.05, dt);
+  grid.material.opacity = damp(grid.material.opacity, sky ? 0.35 : 0, 0.05, dt);
+  grid.visible = grid.material.opacity > 0.02;
+}
+// jump straight to the sector for progress 0 (menus, new run, theme button on the home screen)
+function snapTheme() {
+  const th = sectorAt(0), sky = th.kind === 'sky';
+  curSector = th;
+  setKind(th.kind);
+  skyCur.setHex(th.sky); applySky();
+  starMat.opacity = th.stars;
+  planetMat.color.setHex(th.planet);
+  planetMat.emissive.copy(planetMat.color);
+  haloMat.color.copy(planetMat.color);
+  planet.position.set(th.px, th.py, -420);
+  streaks.material.color.setHex(sky ? 0xffffff : 0x9bb7ff);
+  streaks.material.opacity = sky ? 0.3 : 0.5;
+  grid.material.opacity = sky ? 0.35 : 0;
+  grid.visible = sky;
 }
 
 // ---- Camera ----
@@ -505,6 +671,7 @@ function tick(dt) {
   updateRings(wdt);
   updatePickups(wdt);
 
+  updateStreaks(forwardSpeed, wdt);
   grid.position.z = (grid.position.z + forwardSpeed * wdt) % 5;
   updateStars(forwardSpeed * 0.6, wdt);
   updateTheme(dt);
@@ -513,7 +680,8 @@ function tick(dt) {
   if (!gameOver) { // engine trail
     for (let i = 0; i < 2; i++) {
       emit(plane.position.x + rand(-0.12, 0.12), plane.position.y + rand(-0.12, 0.12), plane.position.z + 1,
-        rand(-0.01, 0.01), rand(-0.01, 0.01), forwardSpeed * timeScale + 0.04, 22, Math.random() < 0.5 ? 0xff7733 : 0xffcc55);
+        rand(-0.01, 0.01), rand(-0.01, 0.01), forwardSpeed * timeScale + 0.04, 22,
+        curSector && curSector.kind === 'sky' ? (Math.random() < 0.5 ? 0xffffff : 0xbbbbbb) : (Math.random() < 0.5 ? 0xff7733 : 0xffcc55));
     }
   }
 }
@@ -528,6 +696,7 @@ function animate(now) {
   if (gameStarted && !gameOver) tick(dt);
   else if (!gameStarted) { // home screen idle
     plane.rotation.z += 0.02 * dt;
+    updateStreaks(0.05, dt);
     grid.position.z = (grid.position.z + 0.05 * dt) % 5;
     updateStars(0.03, dt);
   }
@@ -552,8 +721,8 @@ function startGame() {
   plane.visible = true;
   score = 0; progress = 0; forwardSpeed = 0.2; timeScale = 1; shake = 0;
   power.shield = false; power.slow = 0; power.magnet = 0; shield.visible = false;
-  storm.left = 0; nextStorm = 300; obsT = 0; ringT = 0; puT = 0; themeIdx = 0;
-  skyCur.setHex(THEMES[0].sky); applySky(); starMat.opacity = 0.1;
+  storm.left = 0; nextStorm = 300; obsT = 0; ringT = 0; puT = 0;
+  snapTheme();
   camX = 0; camY = 2; camera.fov = 75; camera.updateProjectionMatrix();
   scoreEl.textContent = 'Score: 0';
   scoreEl.style.display = 'block';
@@ -566,6 +735,7 @@ function startGame() {
   gameOver = false;
   gameStarted = true;
 }
+snapTheme();
 document.getElementById('playBtn').addEventListener('click', startGame);
 document.getElementById('restartBtn').addEventListener('click', startGame);
 
