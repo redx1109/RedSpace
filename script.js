@@ -195,6 +195,10 @@ const startEl = document.getElementById('startScreen');
 // ---- HUD (built here so index.html stays untouched) ----
 function mk(id) { const d = document.createElement('div'); d.id = id; document.body.appendChild(d); return d; }
 const bestEl = mk('best'), comboEl = mk('combo'), puEl = mk('powerups'), bannerEl = mk('banner');
+const rotateEl = mk('rotate');
+rotateEl.textContent = 'Rotate your phone to play';
+const portrait = window.matchMedia('(orientation: portrait) and (max-width: 900px)');
+
 const bestLine = document.createElement('p');
 bestLine.id = 'bestLine';
 startEl.insertBefore(bestLine, document.getElementById('playBtn'));
@@ -241,6 +245,11 @@ function audioInit() {
     if (actx.state === 'suspended') actx.resume();
   } catch (e) { actx = null; }
 }
+try {
+  const el = document.documentElement;
+  (el.requestFullscreen ? el.requestFullscreen() : Promise.reject())
+    .then(() => screen.orientation.lock('landscape')).catch(() => {});
+} catch (e) {}
 function tone(freq, dur, type, vol, slideTo) {
   if (!actx) return;
   const t = actx.currentTime, o = actx.createOscillator(), g = actx.createGain();
@@ -689,6 +698,7 @@ function tick(dt) {
 let last = performance.now();
 function animate(now) {
   requestAnimationFrame(animate);
+  if (portrait.matches) { last = now || performance.now(); return; }
   now = now || performance.now();
   const dt = Math.min((now - last) / 16.667, 2); // 1 = one 60Hz frame, any refresh rate
   last = now;
@@ -714,6 +724,11 @@ window.addEventListener('resize', () => {
 function clearList(list) { list.forEach(m => scene.remove(m)); list.length = 0; }
 function startGame() {
   audioInit();
+  try {
+    const el = document.documentElement;
+    (el.requestFullscreen ? el.requestFullscreen() : Promise.reject())
+      .then(() => screen.orientation.lock('landscape')).catch(() => {});
+  } catch (e) {}
   clearList(obstacles); clearList(rings); clearList(pickups);
   pLife.fill(0);
   plane.position.set(0, 2, 0);
