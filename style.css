@@ -15,7 +15,6 @@ canvas { display: block; }
   text-align: center; color: white;
   font-family: Arial; background: rgba(0,0,0,0.7);
   padding: 30px 50px; border-radius: 12px;
-  z-index: 20;
 }
 #gameOver button {
   margin-top: 15px; padding: 10px 25px;
@@ -32,7 +31,6 @@ canvas { display: block; }
   text-align: center; color: white;
   font-family: Arial; background: rgba(0,0,0,0.75);
   padding: 40px 60px; border-radius: 14px;
-  z-index: 20;
 }
 #startScreen h1 { margin: 0 0 10px; font-size: 36px; }
 #startScreen p { margin: 0 0 20px; opacity: 0.85; }
@@ -83,7 +81,32 @@ html, body {
   border-radius: 50%;
 }
 
+/* ---- HUD ---- */
+#best {
+  display: none; position: fixed; top: 10px; left: 12px;
+  color: #fff; font: bold 14px Arial; opacity: 0.85;
+  text-shadow: 1px 1px 3px #000; pointer-events: none;
+}
+#combo {
+  position: fixed; top: 52px; left: 50%; transform: translateX(-50%);
+  color: #ffd700; font: bold 22px Arial;
+  text-shadow: 2px 2px 4px #000; pointer-events: none;
+}
+#powerups {
+  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+  color: #9ff; font: bold 16px Arial; white-space: nowrap;
+  text-shadow: 1px 1px 3px #000; pointer-events: none;
+}
+#banner {
+  position: fixed; top: 28%; left: 50%; transform: translateX(-50%);
+  color: #fff; font: 200 8vw Arial; letter-spacing: 0.3em; white-space: nowrap;
+  text-shadow: 0 0 20px rgba(255,255,255,0.7);
+  opacity: 0; transition: opacity 0.4s; pointer-events: none; z-index: 5;
+}
+#bestLine { margin: 0 0 20px; opacity: 0.85; }
+
 @media (max-width: 600px) {
+  #banner { font-size: 9vw; }
   #startScreen h1 { font-size: 13vw; }
   #startScreen p { font-size: 3vw; }
   #startScreen button { font-size: 20px; padding: 14px 36px; }
