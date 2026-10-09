@@ -181,6 +181,8 @@ let score = 0, progress = 0, combo = 1;
 let gameOver = false, gameStarted = false;
 let forwardSpeed = 0.2, timeScale = 1, shake = 0;
 let best = parseInt(store('redspace_best'), 10) || 0;
+let sens = clamp(parseFloat(store('redspace_sens')) || 1, 0.3, 2.5); // set in the pause menu, saved
+let paused = false;
 const power = { shield: false, slow: 0, magnet: 0 };
 const storm = { left: 0 };
 let nextStorm = 300, obsT = 0, ringT = 0, puT = 0, stormT = 0, curSector = null;
@@ -198,7 +200,6 @@ const bestEl = mk('best'), comboEl = mk('combo'), puEl = mk('powerups'), bannerE
 const rotateEl = mk('rotate');
 rotateEl.textContent = 'Rotate your phone to play';
 const portrait = window.matchMedia('(orientation: portrait) and (max-width: 900px)');
-
 const bestLine = document.createElement('p');
 bestLine.id = 'bestLine';
 startEl.insertBefore(bestLine, document.getElementById('playBtn'));
@@ -217,6 +218,42 @@ themeBtn.addEventListener('click', () => {
   themeBtn.blur();
   if (!gameStarted) snapTheme(); // preview on the home screen; in a run it fades in
 });
+
+// pause button + menu (the sensitivity slider is saved between visits)
+const pauseBtn = document.createElement('button');
+pauseBtn.id = 'pauseBtn';
+pauseBtn.textContent = 'II';
+pauseBtn.setAttribute('aria-label', 'Pause');
+document.body.appendChild(pauseBtn);
+const pauseMenu = mk('pauseMenu');
+pauseMenu.innerHTML =
+  '<div class="panel"><h2>PAUSED</h2>' +
+  '<label id="sensLabel"></label>' +
+  '<input id="sensSlider" type="range" min="0.3" max="2.5" step="0.05">' +
+  '<div class="row"><span>Low</span><span>High</span></div>' +
+  '<div class="btns"><button id="resumeBtn">Resume</button><button id="pauseRestartBtn">Restart</button></div></div>';
+const sensSlider = document.getElementById('sensSlider'), sensLabel = document.getElementById('sensLabel');
+function showSens() { sensLabel.textContent = 'Sensitivity: ' + sens.toFixed(2) + 'x'; }
+sensSlider.value = sens;
+showSens();
+sensSlider.addEventListener('input', () => {
+  sens = parseFloat(sensSlider.value);
+  showSens();
+  store('redspace_sens', String(sens));
+});
+function setPaused(p) {
+  if (p === paused || (p && (!gameStarted || gameOver))) return;
+  paused = p;
+  pauseMenu.style.display = p ? 'flex' : 'none';
+  if (p) joyReset(); else last = performance.now();
+}
+pauseBtn.addEventListener('click', () => { pauseBtn.blur(); setPaused(true); });
+document.getElementById('resumeBtn').addEventListener('click', () => setPaused(false));
+document.getElementById('pauseRestartBtn').addEventListener('click', () => startGame());
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' || e.key.toLowerCase() === 'p') setPaused(!paused);
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) setPaused(true); });
 
 let bannerTimer = 0;
 function banner(text) {
@@ -245,11 +282,6 @@ function audioInit() {
     if (actx.state === 'suspended') actx.resume();
   } catch (e) { actx = null; }
 }
-try {
-  const el = document.documentElement;
-  (el.requestFullscreen ? el.requestFullscreen() : Promise.reject())
-    .then(() => screen.orientation.lock('landscape')).catch(() => {});
-} catch (e) {}
 function tone(freq, dur, type, vol, slideTo) {
   if (!actx) return;
   const t = actx.currentTime, o = actx.createOscillator(), g = actx.createGain();
@@ -345,14 +377,13 @@ document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
 document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
 const moveSpeed = 0.15;
-const TOUCH_SPEED = 0.7; // lower = calmer on phone
 const bounds = { x: 5, y: 4, yMin: 0.5 };
 
 function updateControls(dt) {
   const kx = (keys.arrowright || keys.d ? 1 : 0) - (keys.arrowleft || keys.a ? 1 : 0);
   const ky = (keys.arrowup || keys.w ? 1 : 0) - (keys.arrowdown || keys.s ? 1 : 0);
-  plane.position.x += (kx * moveSpeed + joyX * Math.abs(joyX) * moveSpeed * TOUCH_SPEED) * dt;
-  plane.position.y += (ky * moveSpeed - joyY * Math.abs(joyY) * moveSpeed * TOUCH_SPEED) * dt;
+  plane.position.x += (kx + joyX * Math.abs(joyX)) * moveSpeed * sens * dt;
+  plane.position.y += (ky - joyY * Math.abs(joyY)) * moveSpeed * sens * dt;
   plane.position.x = clamp(plane.position.x, -bounds.x, bounds.x);
   plane.position.y = clamp(plane.position.y, bounds.yMin, bounds.y);
 
@@ -385,7 +416,7 @@ function joyTouch(list) {
   return null;
 }
 document.addEventListener('touchstart', e => {
-  if (!gameStarted || gameOver || joyId !== null) return;
+  if (!gameStarted || gameOver || paused || joyId !== null) return;
   if (e.target.closest && e.target.closest('button')) return;
   const t = e.changedTouches[0];
   joyId = t.identifier;
@@ -495,6 +526,7 @@ function crash(o) {
   }
   gameOver = true;
   joyReset();
+  pauseBtn.style.display = 'none';
   burst(plane.position, 0xff8844, 90);
   burst(plane.position, 0xffdd88, 40);
   plane.visible = false;
@@ -699,6 +731,7 @@ let last = performance.now();
 function animate(now) {
   requestAnimationFrame(animate);
   if (portrait.matches) { last = now || performance.now(); return; }
+  if (paused) { last = now || performance.now(); renderer.render(scene, camera); return; }
   now = now || performance.now();
   const dt = Math.min((now - last) / 16.667, 2); // 1 = one 60Hz frame, any refresh rate
   last = now;
@@ -724,11 +757,13 @@ window.addEventListener('resize', () => {
 function clearList(list) { list.forEach(m => scene.remove(m)); list.length = 0; }
 function startGame() {
   audioInit();
-  try {
-    const el = document.documentElement;
-    (el.requestFullscreen ? el.requestFullscreen() : Promise.reject())
-      .then(() => screen.orientation.lock('landscape')).catch(() => {});
-  } catch (e) {}
+  if (window.matchMedia('(pointer: coarse)').matches) { // phones: fullscreen + landscape where the browser allows it
+    try {
+      const el = document.documentElement;
+      (el.requestFullscreen ? el.requestFullscreen() : Promise.reject())
+        .then(() => screen.orientation.lock('landscape')).catch(() => {});
+    } catch (e) {}
+  }
   clearList(obstacles); clearList(rings); clearList(pickups);
   pLife.fill(0);
   plane.position.set(0, 2, 0);
@@ -744,6 +779,7 @@ function startGame() {
   setCombo(1); updateHud();
   bestEl.textContent = 'Best ' + best; bestEl.style.display = 'block';
   joyReset();
+  paused = false; pauseMenu.style.display = 'none'; pauseBtn.style.display = 'block';
   overEl.style.display = 'none';
   startEl.style.display = 'none';
   last = performance.now();
