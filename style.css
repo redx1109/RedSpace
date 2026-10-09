@@ -105,11 +105,45 @@ html, body {
 }
 #bestLine { margin: 0 0 20px; opacity: 0.85; }
 #themeBtn {
-  position: fixed; top: 8px; right: 10px; z-index: 20;
+  position: fixed; top: 8px; right: 56px; z-index: 20;
   padding: 6px 10px; font: bold 12px Arial; letter-spacing: 0.05em; color: #fff;
   background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4);
   border-radius: 8px; cursor: pointer;
 }
+#pauseBtn {
+  display: none; position: fixed; top: 8px; right: 10px; z-index: 20;
+  width: 38px; height: 30px; padding: 0; font: bold 13px Arial; letter-spacing: 1px; color: #fff;
+  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 8px; cursor: pointer;
+}
+#pauseMenu {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 50;
+  background: rgba(0,0,0,0.7); align-items: center; justify-content: center;
+  color: #fff; font-family: Arial;
+}
+#pauseMenu .panel {
+  box-sizing: border-box; width: min(86vw, 360px); max-height: 92vh; overflow-y: auto;
+  padding: 20px 24px; text-align: center;
+  background: rgba(20,24,48,0.95); border: 1px solid rgba(255,255,255,0.25); border-radius: 14px;
+}
+#pauseMenu h2 { margin: 0 0 14px; font-weight: 300; letter-spacing: 0.2em; }
+#pauseMenu label { display: block; margin-bottom: 8px; font-weight: bold; }
+#pauseMenu input[type=range] { width: 100%; height: 32px; margin: 2px 0; accent-color: #ffd700; touch-action: none; }
+#pauseMenu .row { display: flex; justify-content: space-between; margin-bottom: 14px; font-size: 12px; opacity: 0.7; }
+#pauseMenu .btns { display: flex; gap: 10px; }
+#pauseMenu button {
+  flex: 1; padding: 11px 0; font-size: 16px; font-weight: bold;
+  border: none; border-radius: 8px; background: #ffd700; cursor: pointer;
+}
+#pauseMenu #pauseRestartBtn { background: rgba(255,255,255,0.2); color: #fff; }
+
+/* shown when a phone is held upright */
+#rotate {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100;
+  background: #070a1f; color: #fff; font: bold 22px Arial;
+  align-items: center; justify-content: center; text-align: center; padding: 20px;
+}
+@media (orientation: portrait) and (max-width: 900px) { #rotate { display: flex; } }
 
 @media (max-width: 600px) {
   #banner { font-size: 9vw; }
@@ -120,10 +154,3 @@ html, body {
   #gameOver h1 { font-size: 10vw; border-radius: 30px; }
   #score { font-size: 7vw; justify-content:center;}
 }
-
-#rotate {
-  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100;
-  background: #070a1f; color: #fff; font: bold 22px Arial;
-  align-items: center; justify-content: center; text-align: center; padding: 20px;
-}
-@media (orientation: portrait) and (max-width: 900px) { #rotate { display: flex; } }
