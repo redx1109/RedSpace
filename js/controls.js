@@ -37,8 +37,8 @@ function updateControls(dt) {
   let ky = (keys.arrowup || keys.w ? 1 : 0) - (keys.arrowdown || keys.s ? 1 : 0);
   const kl = Math.hypot(kx, ky);
   if (kl > 1) { kx /= kl; ky /= kl; }
-  velX = damp(velX, clamp(kx + joyX * Math.abs(joyX), -1, 1), 0.25, dt);
-  velY = damp(velY, clamp(ky - joyY * Math.abs(joyY), -1, 1), 0.25, dt);
+  velX = damp(velX, clamp(kx + joyX, -1, 1), 0.25, dt);
+  velY = damp(velY, clamp(ky - joyY, -1, 1), 0.25, dt);
   plane.position.x += velX * moveSpeed * sens * dt;
   plane.position.y += velY * moveSpeed * sens * dt;
   let mdx = 0;
@@ -100,13 +100,22 @@ document.addEventListener('touchmove', e => {
   e.preventDefault();
   let dx = t.clientX - joyCenterX;
   let dy = t.clientY - joyCenterY;
+  const raw = Math.hypot(dx, dy);
+  if (raw > JOY_MAX) { // center follows the thumb so reversing is instant
+    const k = (raw - JOY_MAX) / raw;
+    joyCenterX += dx * k; joyCenterY += dy * k;
+    zone.style.left = (joyCenterX - zone.offsetWidth / 2) + 'px';
+    zone.style.top = (joyCenterY - zone.offsetHeight / 2) + 'px';
+    dx = t.clientX - joyCenterX; dy = t.clientY - joyCenterY;
+  }
   const dist = Math.min(Math.hypot(dx, dy), JOY_MAX);
   const angle = Math.atan2(dy, dx);
   dx = Math.cos(angle) * dist;
   dy = Math.sin(angle) * dist;
   stick.style.transform = `translate(${dx}px, ${dy}px)`;
-  joyX = joyAxis(dx / JOY_MAX);
-  joyY = joyAxis(dy / JOY_MAX);
+  const m = Math.pow(joyAxis(dist / JOY_MAX), 1.5); // one radial deadzone + gentle curve
+  const s = dist > 0 ? m / dist : 0;
+  joyX = dx * s; joyY = dy * s;
 }, { passive: false });
 function joyEnd(e) {
   if (joyId !== null && joyTouch(e.changedTouches)) joyReset();
