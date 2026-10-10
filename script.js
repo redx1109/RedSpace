@@ -245,7 +245,7 @@ function setPaused(p) {
   if (p === paused || (p && (!gameStarted || gameOver))) return;
   paused = p;
   pauseMenu.style.display = p ? 'flex' : 'none';
-  if (p) joyReset(); else last = performance.now();
+  if (p) { joyReset(); clearKeys(); } else last = performance.now();
 }
 pauseBtn.addEventListener('click', () => { pauseBtn.blur(); setPaused(true); });
 document.getElementById('resumeBtn').addEventListener('click', () => setPaused(false));
@@ -373,22 +373,59 @@ function updateParticles(dt) {
 
 // ---- Controls ----
 const keys = {};
-document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+const NAV_KEYS = ['arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'a', 'd', 'w', 's'];
+const mouse = { x: 0, y: 0, active: false }; // active = mouse is steering
+document.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (k.startsWith('arrow')) e.preventDefault();
+  if (NAV_KEYS.indexOf(k) >= 0) mouse.active = false;
+  keys[k] = true;
+});
 document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+function clearKeys() { for (const k in keys) keys[k] = false; }
+window.addEventListener('blur', clearKeys);
 
 const moveSpeed = 0.15;
 const bounds = { x: 5, y: 4, yMin: 0.5 };
+let velX = 0, velY = 0;
+
+// ---- Mouse: the ship flies toward the cursor ----
+const reticle = mk('reticle');
+window.addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse') return; // touch has its own joystick
+  const nx = clamp(((e.clientX / window.innerWidth) - 0.5) * 2.4, -1, 1);  // edges of the screen reach the edges of the play area
+  const ny = clamp(((e.clientY / window.innerHeight) - 0.5) * 2.4, -1, 1);
+  mouse.x = nx * bounds.x;
+  mouse.y = bounds.yMin + (1 - (ny + 1) / 2) * (bounds.y - bounds.yMin);
+  mouse.active = true;
+  reticle.style.transform = 'translate(' + e.clientX + 'px, ' + e.clientY + 'px)';
+});
+function updateAim() { // hide the system cursor and show the ring while the mouse is steering
+  document.body.classList.toggle('aiming', mouse.active && gameStarted && !gameOver && !paused);
+}
 
 function updateControls(dt) {
-  const kx = (keys.arrowright || keys.d ? 1 : 0) - (keys.arrowleft || keys.a ? 1 : 0);
-  const ky = (keys.arrowup || keys.w ? 1 : 0) - (keys.arrowdown || keys.s ? 1 : 0);
-  plane.position.x += (kx + joyX * Math.abs(joyX)) * moveSpeed * sens * dt;
-  plane.position.y += (ky - joyY * Math.abs(joyY)) * moveSpeed * sens * dt;
+  let kx = (keys.arrowright || keys.d ? 1 : 0) - (keys.arrowleft || keys.a ? 1 : 0);
+  let ky = (keys.arrowup || keys.w ? 1 : 0) - (keys.arrowdown || keys.s ? 1 : 0);
+  const kl = Math.hypot(kx, ky);
+  if (kl > 1) { kx /= kl; ky /= kl; }
+  velX = damp(velX, clamp(kx + joyX * Math.abs(joyX), -1, 1), 0.25, dt);
+  velY = damp(velY, clamp(ky - joyY * Math.abs(joyY), -1, 1), 0.25, dt);
+  plane.position.x += velX * moveSpeed * sens * dt;
+  plane.position.y += velY * moveSpeed * sens * dt;
+  let mdx = 0;
+  if (mouse.active) { // ease toward the cursor, speed and snappiness follow the sensitivity slider
+    const gain = Math.min(0.2 * sens, 0.6), maxStep = moveSpeed * sens * 2;
+    mdx = mouse.x - plane.position.x;
+    const mdy = mouse.y - plane.position.y;
+    plane.position.x += clamp(mdx * gain, -maxStep, maxStep) * dt;
+    plane.position.y += clamp(mdy * gain, -maxStep, maxStep) * dt;
+  }
   plane.position.x = clamp(plane.position.x, -bounds.x, bounds.x);
   plane.position.y = clamp(plane.position.y, bounds.yMin, bounds.y);
 
   // bank + yaw into the turn
-  const steer = kx || joyX;
+  const steer = Math.abs(velX) > 0.05 ? velX : clamp(mdx * 0.6, -1, 1);
   plane.rotation.z = damp(plane.rotation.z, -steer * 0.7, 0.12, dt);
   plane.rotation.y = damp(plane.rotation.y, -steer * 0.35, 0.12, dt);
 }
@@ -398,7 +435,7 @@ const zone = document.getElementById('joystickZone');
 const stick = document.getElementById('joystickStick');
 let joyId = null, joyX = 0, joyY = 0;
 let joyCenterX = 0, joyCenterY = 0;
-const JOY_MAX = 37;
+const JOY_MAX = 50;
 const JOY_DEAD = 0.12;
 
 function joyAxis(v) {
@@ -416,6 +453,7 @@ function joyTouch(list) {
   return null;
 }
 document.addEventListener('touchstart', e => {
+  mouse.active = false;
   if (!gameStarted || gameOver || paused || joyId !== null) return;
   if (e.target.closest && e.target.closest('button')) return;
   const t = e.changedTouches[0];
@@ -730,6 +768,7 @@ function tick(dt) {
 let last = performance.now();
 function animate(now) {
   requestAnimationFrame(animate);
+  updateAim();
   if (portrait.matches) { last = now || performance.now(); return; }
   if (paused) { last = now || performance.now(); renderer.render(scene, camera); return; }
   now = now || performance.now();
@@ -755,6 +794,7 @@ window.addEventListener('resize', () => {
 
 // ---- Start / restart ----
 function clearList(list) { list.forEach(m => scene.remove(m)); list.length = 0; }
+
 function startGame() {
   audioInit();
   if (window.matchMedia('(pointer: coarse)').matches) { // phones: fullscreen + landscape where the browser allows it
@@ -779,6 +819,8 @@ function startGame() {
   setCombo(1); updateHud();
   bestEl.textContent = 'Best ' + best; bestEl.style.display = 'block';
   joyReset();
+  mouse.active = false;
+  velX = 0; velY = 0;
   paused = false; pauseMenu.style.display = 'none'; pauseBtn.style.display = 'block';
   overEl.style.display = 'none';
   startEl.style.display = 'none';
