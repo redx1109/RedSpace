@@ -39,6 +39,12 @@ function updateControls(dt) {
   if (kl > 1) { kx /= kl; ky /= kl; }
   velX = damp(velX, clamp(kx + joyX, -1, 1), 0.25, dt);
   velY = damp(velY, clamp(ky - joyY * 0.6, -1, 1), 0.25, dt);
+  if (joyId !== null) { // thumb drag: ship eases to where your thumb moved it
+    const f = 1 - Math.pow(0.65, dt);
+    mdx = dragTX - plane.position.x;
+    plane.position.x += mdx * f;
+    plane.position.y += (dragTY - plane.position.y) * f;
+  }
   plane.position.x += velX * moveSpeed * sens * dt;
   plane.position.y += velY * moveSpeed * sens * dt;
   let mdx = 0;
@@ -62,6 +68,7 @@ function updateControls(dt) {
 const zone = document.getElementById('joystickZone');
 const stick = document.getElementById('joystickStick');
 let joyId = null, joyX = 0, joyY = 0;
+let dragTX = 0, dragTY = 0; // where your thumb has moved the ship to
 let joyCenterX = 0, joyCenterY = 0;
 const JOY_MAX = 50;
 const JOY_DEAD = 0.22;
@@ -82,33 +89,28 @@ function joyTouch(list) {
 }
 document.addEventListener('touchstart', e => {
   mouse.active = false;
-  if (joyId !== null && !joyTouch(e.touches)) joyReset();
+  if (joyId !== null && !joyTouch(e.touches)) joyReset(); // missed touchend
   if (!gameStarted || gameOver || paused || joyId !== null) return;
   if (e.target.closest && e.target.closest('button')) return;
   const t = e.changedTouches[0];
   joyId = t.identifier;
-  joyCenterX = t.clientX;
+  joyCenterX = t.clientX; // now means last finger position
   joyCenterY = t.clientY;
-  zone.style.display = 'block';
-  zone.style.left = (joyCenterX - zone.offsetWidth / 2) + 'px';
-  zone.style.top = (joyCenterY - zone.offsetHeight / 2) + 'px';
+  dragTX = plane.position.x; dragTY = plane.position.y;
 }, { passive: false });
+
 document.addEventListener('touchmove', e => {
   if (joyId === null) return;
   const t = joyTouch(e.changedTouches);
   if (!t) return;
   e.preventDefault();
-  let dx = t.clientX - joyCenterX;
-  let dy = t.clientY - joyCenterY;
-  const dist = Math.min(Math.hypot(dx, dy), JOY_MAX);
-  const angle = Math.atan2(dy, dx);
-  dx = Math.cos(angle) * dist;
-  dy = Math.sin(angle) * dist;
-  stick.style.transform = `translate(${dx}px, ${dy}px)`;
-  const m = Math.pow(joyAxis(dist / JOY_MAX), 2);
-  const s = dist > 0 ? m / dist : 0;
-  joyX = dx * s; joyY = dy * s;
+  const kx = (2 * bounds.x) / (window.innerWidth * 0.45) * sens;
+  const ky = (bounds.y - bounds.yMin) / (window.innerHeight * 0.45) * sens;
+  dragTX = clamp(dragTX + (t.clientX - joyCenterX) * kx, -bounds.x, bounds.x);
+  dragTY = clamp(dragTY - (t.clientY - joyCenterY) * ky, bounds.yMin, bounds.y);
+  joyCenterX = t.clientX; joyCenterY = t.clientY;
 }, { passive: false });
+
 function joyEnd(e) {
   if (joyId !== null && joyTouch(e.changedTouches)) joyReset();
 }
