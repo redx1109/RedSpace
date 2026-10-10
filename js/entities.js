@@ -30,17 +30,28 @@ function addObs(mesh, kind, value, extra) {
 }
 function spawnRocks(moving) {
   const gapX = (Math.random() - 0.5) * 6, z = spawnZ(), ph = Math.random() * 6.28;
+  const shift = Math.random() * 2 - 1; // slide the whole grid each row so no lane stays safe
   for (let x = -6; x <= 6; x += 2) {
-    if (Math.abs(x - gapX) < 1.5) continue; // leave a gap to dodge through
+    const rx = x + shift + (Math.random() - 0.5) * 0.8;
+    if (Math.abs(rx - gapX) < 1.5) continue; // leave a gap to dodge through
     const o = new THREE.Mesh(rockGeo, rockMat);
     o.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
-    o.position.set(x, Math.random() * 3.5 + 0.5, z);
+    o.position.set(rx, Math.random() * 3.5 + 0.5, z);
     addObs(o, moving ? 'mover' : 'rock', 1, { ph });
   }
+  // anti-camping: if the ship sits outside the gap, one rock is aimed at it
+  const px = plane.position.x;
+  if (Math.abs(px - gapX) > 2.6) {
+    const a = new THREE.Mesh(rockGeo, rockMat);
+    a.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
+    a.position.set(px, clamp(plane.position.y + (Math.random() - 0.5) * 0.6, 0.5, 4), z);
+    addObs(a, 'rock', 1, { ph });
+  }
 }
+
 function spawnLaser() {
   const o = new THREE.Mesh(laserGeo, laserMat);
-  o.position.set(0, rand(1.2, 3.6), spawnZ());
+  o.position.set(0, rand(0.6, 3.9), spawnZ());
   addObs(o, 'laser', 3);
 }
 function spawnSpinner() {
@@ -168,6 +179,8 @@ function updatePickups(wdt) {
 
 // ---- Spawner (time measured in 60Hz frames, scaled by slow-mo) ----
 function spawner(wdt) {
+  const gapT = Math.max(34, 48 - progress * 0.04); // frames between obstacle rows
+  let mid = false; // true when we're midway between two rows
   if (storm.left > 0) {
     // ring storm: no obstacles, a snake of rings to chase
     storm.left -= wdt; stormT += wdt; ringT += wdt;
@@ -182,13 +195,11 @@ function spawner(wdt) {
     }
   } else {
     obsT += wdt; ringT += wdt;
-    const gapT = Math.max(34, 48 - progress * 0.04); // frames between obstacle rows
     if (obsT >= gapT) { obsT = 0; spawnPattern(); }
-    // rings only spawn midway between two rows, so nothing sits right behind or in front of one
-    if (ringT >= 84 && obsT > gapT * 0.4 && obsT < gapT * 0.6) { ringT = 0; makeRing(rand(-4, 4), rand(1, 4), 5); }
+    mid = obsT > gapT * 0.4 && obsT < gapT * 0.6;
+    if (ringT >= 84 && mid) { ringT = 0; makeRing(rand(-4, 4), rand(1, 4), 5); }
     if (progress >= nextStorm) { storm.left = 480; stormT = 0; ringT = 0; banner('RING STORM'); sfx.storm(); }
   }
   puT += wdt;
-  if (puT >= 720) { puT = 0; spawnPickup(); }
+  if (puT >= 720 && (storm.left > 0 || (mid && ringT > 8))) { puT = 0; spawnPickup(); }
 }
-
