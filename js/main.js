@@ -2,7 +2,7 @@
 function tick(dt) {
   timeScale = damp(timeScale, power.slow > 0 ? 0.5 : 1, 0.1, dt);
   const wdt = dt * timeScale; // world time (slow-mo affects the world, not your hands)
-  forwardSpeed = Math.min(0.2 + progress * 0.0008, 0.75);
+  forwardSpeed = Math.min(0.2 + progress * 0.0006, 0.7);
   if (power.slow > 0) power.slow -= dt;
   if (power.magnet > 0) power.magnet -= dt;
 
