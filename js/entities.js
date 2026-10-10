@@ -21,6 +21,14 @@ const PU = { shield: { color: 0x44aaff }, slow: { color: 0xaa66ff }, magnet: { c
 for (const k in PU) PU[k].mat = new THREE.MeshStandardMaterial({ color: PU[k].color, emissive: PU[k].color, emissiveIntensity: 0.6 });
 
 function spawnZ() { return plane.position.z - 70 - forwardSpeed * 30; }
+// ---- Difficulty tiers (by progress) ----
+const TIERS = [
+  { name: 'EASY',   lvl: 0, from: 0,   gap: 2.0,  rowT: 60 },
+  { name: 'MEDIUM', lvl: 1, from: 150, gap: 1.75, rowT: 46 },
+  { name: 'HARD',   lvl: 2, from: 450, gap: 1.5,  rowT: 36 },
+];
+let lastLvl = 0;
+function tier() { let t = TIERS[0]; for (const x of TIERS) if (progress >= x.from) t = x; return t; }
 
 // ---- Obstacles ----
 function addObs(mesh, kind, value, extra) {
@@ -30,10 +38,11 @@ function addObs(mesh, kind, value, extra) {
 }
 function spawnRocks(moving) {
   const gapX = (Math.random() - 0.5) * 6, z = spawnZ(), ph = Math.random() * 6.28;
+  const gw = tier().gap; // easy = wider dodge gap
   const shift = Math.random() * 2 - 1; // slide the whole grid each row so no lane stays safe
   for (let x = -6; x <= 6; x += 2) {
     const rx = x + shift + (Math.random() - 0.5) * 0.8;
-    if (Math.abs(rx - gapX) < 1.5) continue; // leave a gap to dodge through
+    if (Math.abs(rx - gapX) < gw) continue;
     const o = new THREE.Mesh(rockGeo, rockMat);
     o.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
     o.position.set(rx, Math.random() * 3.5 + 0.5, z);
@@ -41,7 +50,7 @@ function spawnRocks(moving) {
   }
   // anti-camping: if the ship sits outside the gap, one rock is aimed at it
   const px = plane.position.x;
-  if (Math.abs(px - gapX) > 2.6) {
+  if (tier().lvl >= 1 && Math.abs(px - gapX) > gw + 1.1) { // aimed rock starts at medium
     const a = new THREE.Mesh(rockGeo, rockMat);
     a.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
     a.position.set(px, clamp(plane.position.y + (Math.random() - 0.5) * 0.6, 0.5, 4), z);
@@ -60,13 +69,21 @@ function spawnSpinner() {
   o.rotation.z = Math.random() * 3;
   addObs(o, 'spinner', 3, { spin: (Math.random() < 0.5 ? -1 : 1) * 0.035 });
 }
+
 function spawnPattern() {
-  const r = Math.random();
-  if (progress >= 110 && r < 0.2) return spawnSpinner();
-  if (progress >= 60 && r < 0.4) return spawnRocks(true);
-  if (progress >= 25 && r < 0.6) return spawnLaser();
+  const r = Math.random(), lvl = tier().lvl;
+  if (lvl === 0) return spawnRocks(false); // easy: plain rocks only
+  if (lvl === 1) { // medium: adds moving rocks and lasers
+    if (r < 0.2) return spawnLaser();
+    if (r < 0.45) return spawnRocks(true);
+    return spawnRocks(false);
+  }
+  if (r < 0.2) return spawnSpinner(); // hard: everything
+  if (r < 0.4) return spawnRocks(true);
+  if (r < 0.6) return spawnLaser();
   spawnRocks(false);
 }
+
 function hits(o) {
   const u = o.userData, p = plane.position, dz = o.position.z - p.z;
   if (u.kind === 'laser') return Math.abs(dz) < 0.6 && Math.abs(o.position.y - p.y) < 0.5;
@@ -179,7 +196,10 @@ function updatePickups(wdt) {
 
 // ---- Spawner (time measured in 60Hz frames, scaled by slow-mo) ----
 function spawner(wdt) {
-  const gapT = Math.max(34, 48 - progress * 0.04); // frames between obstacle rows
+  const T = tier();
+  if (T.lvl > lastLvl) banner(T.name);
+  lastLvl = T.lvl;
+  const gapT = T.rowT; // frames between obstacle rows
   let mid = false; // true when we're midway between two rows
   if (storm.left > 0) {
     // ring storm: no obstacles, a snake of rings to chase
