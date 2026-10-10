@@ -38,7 +38,7 @@ function updateControls(dt) {
   const kl = Math.hypot(kx, ky);
   if (kl > 1) { kx /= kl; ky /= kl; }
   velX = damp(velX, clamp(kx + joyX, -1, 1), 0.25, dt);
-  velY = damp(velY, clamp(ky - joyY, -1, 1), 0.25, dt);
+  velY = damp(velY, clamp(ky - joyY * 0.6, -1, 1), 0.25, dt);
   plane.position.x += velX * moveSpeed * sens * dt;
   plane.position.y += velY * moveSpeed * sens * dt;
   let mdx = 0;
@@ -113,7 +113,7 @@ document.addEventListener('touchmove', e => {
   dx = Math.cos(angle) * dist;
   dy = Math.sin(angle) * dist;
   stick.style.transform = `translate(${dx}px, ${dy}px)`;
-  const m = Math.pow(joyAxis(dist / JOY_MAX), 1.5); // one radial deadzone + gentle curve
+  const m = Math.pow(joyAxis(dist / JOY_MAX), 2);
   const s = dist > 0 ? m / dist : 0;
   joyX = dx * s; joyY = dy * s;
 }, { passive: false });
