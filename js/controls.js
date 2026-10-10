@@ -64,7 +64,7 @@ const stick = document.getElementById('joystickStick');
 let joyId = null, joyX = 0, joyY = 0;
 let joyCenterX = 0, joyCenterY = 0;
 const JOY_MAX = 50;
-const JOY_DEAD = 0.12;
+const JOY_DEAD = 0.22;
 
 function joyAxis(v) {
   const a = Math.abs(v);
@@ -100,14 +100,6 @@ document.addEventListener('touchmove', e => {
   e.preventDefault();
   let dx = t.clientX - joyCenterX;
   let dy = t.clientY - joyCenterY;
-  const raw = Math.hypot(dx, dy);
-  if (raw > JOY_MAX) { // center follows the thumb so reversing is instant
-    const k = (raw - JOY_MAX) / raw;
-    joyCenterX += dx * k; joyCenterY += dy * k;
-    zone.style.left = (joyCenterX - zone.offsetWidth / 2) + 'px';
-    zone.style.top = (joyCenterY - zone.offsetHeight / 2) + 'px';
-    dx = t.clientX - joyCenterX; dy = t.clientY - joyCenterY;
-  }
   const dist = Math.min(Math.hypot(dx, dy), JOY_MAX);
   const angle = Math.atan2(dy, dx);
   dx = Math.cos(angle) * dist;
