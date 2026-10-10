@@ -39,12 +39,7 @@ function updateControls(dt) {
   if (kl > 1) { kx /= kl; ky /= kl; }
   velX = damp(velX, clamp(kx + joyX, -1, 1), 0.25, dt);
   velY = damp(velY, clamp(ky - joyY * 0.6, -1, 1), 0.25, dt);
-  if (joyId !== null) { // thumb drag: ship eases to where your thumb moved it
-    const f = 1 - Math.pow(0.65, dt);
-    mdx = dragTX - plane.position.x;
-    plane.position.x += mdx * f;
-    plane.position.y += (dragTY - plane.position.y) * f;
-  }
+
   plane.position.x += velX * moveSpeed * sens * dt;
   plane.position.y += velY * moveSpeed * sens * dt;
   let mdx = 0;
@@ -55,11 +50,19 @@ function updateControls(dt) {
     plane.position.x += clamp(mdx * gain, -maxStep, maxStep) * dt;
     plane.position.y += clamp(mdy * gain, -maxStep, maxStep) * dt;
   }
+  
+  if (joyId !== null) { // thumb drag: ship eases to where your thumb moved it
+    const f = 1 - Math.pow(0.65, dt);
+    mdx = dragTX - plane.position.x;
+    plane.position.x += mdx * f;
+    plane.position.y += (dragTY - plane.position.y) * f;
+  }
   plane.position.x = clamp(plane.position.x, -bounds.x, bounds.x);
   plane.position.y = clamp(plane.position.y, bounds.yMin, bounds.y);
 
   // bank + yaw into the turn
   const steer = Math.abs(velX) > 0.05 ? velX : clamp(mdx * 0.6, -1, 1);
+
   plane.rotation.z = damp(plane.rotation.z, -steer * 0.7, 0.12, dt);
   plane.rotation.y = damp(plane.rotation.y, -steer * 0.35, 0.12, dt);
 }
