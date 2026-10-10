@@ -4,7 +4,7 @@ const NAV_KEYS = ['arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'a', 'd', '
 const mouse = { x: 0, y: 0, active: false }; // active = mouse is steering
 document.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
-  if (k.startsWith('arrow')) e.preventDefault();
+  if (k.startsWith('arrow') && e.target.tagName !== 'INPUT') e.preventDefault();
   if (NAV_KEYS.indexOf(k) >= 0) mouse.active = false;
   keys[k] = true;
 });
@@ -20,6 +20,7 @@ let velX = 0, velY = 0;
 const reticle = mk('reticle');
 window.addEventListener('pointermove', e => {
   if (e.pointerType !== 'mouse') return; // touch has its own joystick
+  if (!gameStarted || gameOver || paused) return;
   const nx = clamp(((e.clientX / window.innerWidth) - 0.5) * 2.4, -1, 1);  // edges of the screen reach the edges of the play area
   const ny = clamp(((e.clientY / window.innerHeight) - 0.5) * 2.4, -1, 1);
   mouse.x = nx * bounds.x;
@@ -81,6 +82,7 @@ function joyTouch(list) {
 }
 document.addEventListener('touchstart', e => {
   mouse.active = false;
+  if (joyId !== null && !joyTouch(e.touches)) joyReset();
   if (!gameStarted || gameOver || paused || joyId !== null) return;
   if (e.target.closest && e.target.closest('button')) return;
   const t = e.changedTouches[0];
@@ -111,4 +113,3 @@ function joyEnd(e) {
 }
 document.addEventListener('touchend', joyEnd);
 document.addEventListener('touchcancel', joyEnd);
-
