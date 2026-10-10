@@ -182,8 +182,10 @@ function spawner(wdt) {
     }
   } else {
     obsT += wdt; ringT += wdt;
-    if (obsT >= Math.max(34, 48 - progress * 0.04)) { obsT = 0; spawnPattern(); }
-    if (ringT >= 84) { ringT = 0; makeRing(rand(-4, 4), rand(1, 4), 5); }
+    const gapT = Math.max(34, 48 - progress * 0.04); // frames between obstacle rows
+    if (obsT >= gapT) { obsT = 0; spawnPattern(); }
+    // rings only spawn midway between two rows, so nothing sits right behind or in front of one
+    if (ringT >= 84 && obsT > gapT * 0.4 && obsT < gapT * 0.6) { ringT = 0; makeRing(rand(-4, 4), rand(1, 4), 5); }
     if (progress >= nextStorm) { storm.left = 480; stormT = 0; ringT = 0; banner('RING STORM'); sfx.storm(); }
   }
   puT += wdt;
